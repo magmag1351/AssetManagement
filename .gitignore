@@ -1,0 +1,62 @@
+# ==============================================================================
+# 個人情報・プライベートデータ (Personal Data & Sensitive CSVs)
+# ==============================================================================
+# 収支データベース・明細データ
+db/
+*.csv
+
+# 明細CSVの原本読み込み先
+resources/
+resources/*.csv
+resources/*.xlsx
+resources/*.xls
+
+# ユーザー個人のプロファイル設定 (個人名・口座名を含むためGit管理除外)
+config/profiles.json
+config/genre_rules.json
+config/profiles.local.json
+!config/profiles.json.example
+ARCHITECTURE.md
+
+# ==============================================================================
+# Python 実行環境・キャッシュ (Python Environment & Caches)
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# テスト・カバレッジキャッシュ
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==============================================================================
+# OS・エディタ生成ファイル (OS & IDE Junk)
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ログファイル & 一時フォルダ
+*.log
+tmp/
+temp/
+.tempmediaStorage/

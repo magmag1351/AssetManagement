@@ -1,0 +1,26 @@
+{
+  "active_profile_id": "profile_default",
+  "profiles": [
+    {
+      "id": "profile_default",
+      "name": "サンプル ユーザー",
+      "account_info": "メイン口座・カード連携",
+      "avatar": "サン",
+      "color": "#10b981",
+      "accounts": [
+        {
+          "id": "acc_default_1",
+          "name": "メイン口座",
+          "type": "BANK",
+          "is_primary": true
+        },
+        {
+          "id": "acc_default_2",
+          "name": "クレジットカード",
+          "type": "CARD",
+          "is_primary": false
+        }
+      ]
+    }
+  ]
+}

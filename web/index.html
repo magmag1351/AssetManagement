@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AssetPlanner - 資産管理ダッシュボード</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- サイドバー -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="layers"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">AssetPlanner</span>
+          <span class="brand-sub">Manage your asset</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-view="dashboard">
+          <i data-lucide="layout-grid"></i>
+          <span>ダッシュボード</span>
+        </button>
+        <button class="nav-item" data-view="transactions">
+          <i data-lucide="list-ordered"></i>
+          <span>取引明細一覧</span>
+        </button>
+        <button class="nav-item" data-view="import">
+          <i data-lucide="upload-cloud"></i>
+          <span>明細インポート</span>
+        </button>
+        <button class="nav-item" data-view="rules">
+          <i data-lucide="settings-2"></i>
+          <span>ジャンル分類設定</span>
+        </button>
+      </nav>
+
+      <!-- ユーザー・接続ステータス -->
+      <div class="sidebar-footer">
+        <div class="user-profile-card interactive" id="user-profile-trigger">
+          <div class="avatar" id="sidebar-avatar">--</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">ユーザー</span>
+            <span class="account-tag" id="sidebar-account-tag">口座連携</span>
+          </div>
+          <i data-lucide="chevrons-up-down" class="profile-switch-icon"></i>
+        </div>
+        <div class="status-indicator mt-3">
+          <span class="status-dot online"></span>
+          <span>ローカルDB 正常稼働</span>
+        </div>
+      </div>
+    </aside>
+
+
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+      <!-- ヘッダーバー -->
+      <header class="top-header">
+        <div class="header-left">
+          <div class="breadcrumb">
+            <span>AssetPlanner</span>
+            <i data-lucide="chevron-right"></i>
+            <span id="breadcrumb-current">ダッシュボード</span>
+          </div>
+          <h1 id="page-title">ダッシュボード</h1>
+        </div>
+
+        <div class="header-right">
+          <!-- Quick Cmd Search trigger -->
+          <div class="cmd-search-trigger" id="btn-cmd-search">
+            <i data-lucide="search"></i>
+            <span>明細を検索...</span>
+            <kbd><span class="mac-cmd">⌘</span>K</kbd>
+          </div>
+
+          <div class="month-selector-wrapper">
+            <i data-lucide="building-2"></i>
+            <select id="global-account-select">
+              <option value="all">すべての口座・カード (全統括)</option>
+            </select>
+          </div>
+
+          <div class="month-selector-wrapper">
+            <i data-lucide="calendar"></i>
+            <select id="global-month-select">
+              <option value="all">全期間 (累計)</option>
+            </select>
+          </div>
+
+
+          <button id="btn-quick-import" class="btn btn-primary">
+            <i data-lucide="refresh-cw"></i>
+            <span>明細を同期</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ビュー: ダッシュボード -->
+      <section id="view-dashboard" class="view-section active">
+        <!-- KPI カード群 (Nuxt Style Metric Cards) -->
+        <div class="kpi-grid">
+          <div class="kpi-card glass glow-accent">
+            <div class="kpi-header">
+              <span class="kpi-label">収支差額 (Net Balance)</span>
+              <div class="kpi-icon-badge balance">
+                <i data-lucide="scale"></i>
+              </div>
+            </div>
+            <div class="kpi-value-row">
+              <div class="kpi-value" id="kpi-net-balance">¥0</div>
+              <span class="trend-chip positive" id="kpi-trend-chip">▲ 正常</span>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-subtext" id="kpi-balance-status">収入と支出の差額</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass">
+            <div class="kpi-header">
+              <span class="kpi-label">月間総収入 (Total Income)</span>
+              <div class="kpi-icon-badge income">
+                <i data-lucide="arrow-down-left"></i>
+              </div>
+            </div>
+            <div class="kpi-value-row">
+              <div class="kpi-value positive" id="kpi-total-income">¥0</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-subtext">給与・利息等の入金総額</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass">
+            <div class="kpi-header">
+              <span class="kpi-label">月間総支出 (Total Expense)</span>
+              <div class="kpi-icon-badge expense">
+                <i data-lucide="arrow-up-right"></i>
+              </div>
+            </div>
+            <div class="kpi-value-row">
+              <div class="kpi-value negative" id="kpi-total-expense">¥0</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-subtext">カード・電子マネー等の支出</span>
+            </div>
+          </div>
+
+          <div class="kpi-card glass">
+            <div class="kpi-header">
+              <span class="kpi-label">二重計上防止除外額</span>
+              <div class="kpi-icon-badge transfer">
+                <i data-lucide="shield-check"></i>
+              </div>
+            </div>
+            <div class="kpi-value-row">
+              <div class="kpi-value muted" id="kpi-total-transfers">¥0</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-subtext">カード口座引落（自動除外）</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- チャート & 分析セクション -->
+        <div class="charts-grid">
+          <!-- 月次収支推移 (Area + Bar Combined Chart) -->
+          <div class="chart-card glass span-2">
+            <div class="chart-header">
+              <div>
+                <h3>月次収支推移 (Income vs Expense)</h3>
+                <span class="chart-sub">月ごとの収入および支出の対比・エリアグラフ</span>
+              </div>
+              <div class="chart-actions">
+                <span class="badge badge-outline"><i data-lucide="bar-chart-2"></i> グラデーション表示</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="chart-monthly-trends"></canvas>
+            </div>
+          </div>
+
+          <!-- ジャンル別支出割合 + パーセンテージリスト -->
+          <div class="chart-card glass">
+            <div class="chart-header">
+              <div>
+                <h3>ジャンル別 支出シェア</h3>
+                <span class="chart-sub">カテゴリ別支出割合</span>
+              </div>
+            </div>
+            <div class="genre-breakdown-layout">
+              <div class="chart-container pie-container">
+                <canvas id="chart-genre-breakdown"></canvas>
+              </div>
+              <div class="genre-legend-list" id="genre-legend-list">
+                <!-- JS動的挿入 -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリ別 支出進捗ゲージ & 決済比較 -->
+        <div class="dashboard-secondary-grid mt-6">
+          <!-- カテゴリ別 支出ゲージ (Category Budget Gauges) -->
+          <div class="chart-card glass span-2">
+            <div class="chart-header">
+              <div>
+                <h3>カテゴリ別 支出状況ゲージ</h3>
+                <span class="chart-sub">主要ジャンルごとの当月支出比率</span>
+              </div>
+            </div>
+            <div class="category-gauges-list" id="category-gauges-list">
+              <!-- JS動的挿入 -->
+            </div>
+          </div>
+
+          <!-- 決済手段別 割合 (クレジットカード vs 口座直振・チャージ) -->
+          <div class="chart-card glass">
+            <div class="chart-header">
+              <div>
+                <h3>決済手段別 割合</h3>
+                <span class="chart-sub">カード決済 vs 口座直振・チャージ</span>
+              </div>
+            </div>
+            <div class="chart-container pie-container">
+              <canvas id="chart-payment-method-breakdown"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- クレジットカード別 支出割合 -->
+        <div class="charts-grid mt-6">
+          <div class="chart-card glass span-3">
+            <div class="chart-header">
+              <div>
+                <h3>クレジットカード別 支出割合 (Card Breakdown)</h3>
+                <span class="chart-sub">所有する各クレジットカードごとの利用割合</span>
+              </div>
+            </div>
+            <div class="chart-container pie-container">
+              <canvas id="chart-card-breakdown"></canvas>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- 直近の取引明細プレビュー -->
+        <div class="table-card glass mt-6">
+          <div class="table-header">
+            <div>
+              <h3>直近の取引明細</h3>
+              <span class="chart-sub">最新の明細レコード</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="switchView('transactions')">
+              すべての明細を見る
+              <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>摘要 / 利用内容</th>
+                  <th>決済元・カード</th>
+                  <th>ジャンル</th>
+                  <th class="text-right">金額</th>
+                  <th>区分</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-recent-table">
+                <!-- JSで動的挿入 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ビュー: 取引明細一覧 -->
+      <section id="view-transactions" class="view-section">
+        <div class="filter-bar glass">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="tx-search-input" placeholder="摘要やカード名で検索... (Cmd + K)">
+          </div>
+
+          <div class="filter-group">
+            <select id="tx-genre-filter">
+              <option value="all">すべてのジャンル</option>
+            </select>
+          </div>
+
+          <div class="filter-stats">
+            <span id="tx-count-badge" class="badge badge-accent">0 件ヒット</span>
+          </div>
+        </div>
+
+        <div class="table-card glass">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>摘要 / 利用内容</th>
+                  <th>決済元 / 口座</th>
+                  <th>ジャンル (クリックで編集)</th>
+                  <th class="text-right">金額</th>
+                  <th>区分</th>
+                </tr>
+              </thead>
+              <tbody id="full-transactions-table">
+                <!-- JSで動的挿入 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ビュー: 明細インポート -->
+      <section id="view-import" class="view-section">
+        <div class="import-container glass">
+          <div class="import-dropzone" id="dropzone">
+            <div class="dropzone-icon">
+              <i data-lucide="folder-up"></i>
+            </div>
+            <h3>明細CSVファイルの自動読み込み</h3>
+            <p><code>resources/</code> フォルダ内の新しいカード・銀行明細CSVを読み込んでデータベースに反映します。</p>
+            <button id="btn-start-import" class="btn btn-primary btn-lg mt-4">
+              <i data-lucide="refresh-cw"></i>
+              <span>resources/ フォルダを自動スキャン＆インポート</span>
+            </button>
+          </div>
+
+          <div class="import-logs-card mt-6">
+            <h4>インポート処理ログ</h4>
+            <div class="log-console" id="import-log-console">
+              [待機中] ボタンを押すとインポート処理が開始されます。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ビュー: ジャンル分類設定 -->
+      <section id="view-rules" class="view-section">
+        <div class="rules-grid">
+          <!-- 前方一致ルール -->
+          <div class="rules-card glass">
+            <div class="rules-card-header">
+              <div>
+                <h3>前方一致ルール (Prefix Rules)</h3>
+                <p>摘要が指定した文字で始まる場合に適用されます。</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-add-prefix-rule">
+                <i data-lucide="plus"></i> ルール追加
+              </button>
+            </div>
+
+            <div class="rules-list" id="prefix-rules-list">
+              <!-- Dynamic -->
+            </div>
+          </div>
+
+          <!-- 部分一致ルール -->
+          <div class="rules-card glass">
+            <div class="rules-card-header">
+              <div>
+                <h3>部分一致ルール (Keyword Rules)</h3>
+                <p>摘要に特定のキーワードが含まれる場合に適用されます。</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-add-keyword-rule">
+                <i data-lucide="plus"></i> ルール追加
+              </button>
+            </div>
+
+            <div class="rules-list" id="keyword-rules-list">
+              <!-- Dynamic -->
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions mt-6">
+          <button id="btn-save-rules" class="btn btn-primary btn-lg">
+            <i data-lucide="save"></i>
+            <span>分類ルールを保存して再適用</span>
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ジャンル変更モーダル -->
+  <div class="modal-backdrop" id="genre-modal">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h3>ジャンルの変更</h3>
+        <button class="btn-close" id="btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>対象の取引: <strong id="modal-tx-desc"></strong></p>
+        <div class="form-group mt-4">
+          <label>新しいジャンル</label>
+          <input type="text" id="modal-genre-input" placeholder="例: 食料品, 交通費, 外食...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-modal">キャンセル</button>
+        <button class="btn btn-primary" id="btn-confirm-modal">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロファイル切り替え・管理モーダル -->
+  <div class="modal-backdrop" id="profile-modal">
+    <div class="modal-content glass modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3>プロファイル管理 & 切り替え</h3>
+          <p class="modal-sub">アクティブなプロファイルの切り替え・追加・削除を行えます。</p>
+        </div>
+        <button class="btn-close" id="btn-close-profile-modal"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="profile-modal-grid">
+          <!-- 既存プロファイル一覧 -->
+          <div class="profile-section">
+            <h4 class="section-subtitle">プロファイル一覧</h4>
+            <div class="profile-selection-list" id="profile-selection-list">
+              <!-- JSで動的挿入 -->
+            </div>
+          </div>
+
+          <!-- 新規プロファイル追加フォーム / 編集フォーム -->
+          <div class="profile-section" id="profile-add-section">
+            <h4 class="section-subtitle">新規プロファイルの追加</h4>
+            <div class="form-group">
+              <label>プロファイル名 (ユーザー名)</label>
+              <input type="text" id="new-profile-name" placeholder="例: 家族用アカウント, サブ口座">
+            </div>
+            <div class="form-group mt-3">
+              <label>口座タグ・説明</label>
+              <input type="text" id="new-profile-account" placeholder="例: 副口座連携, 事業用">
+            </div>
+            <div class="form-group mt-3">
+              <label>アバター略称 (2文字)</label>
+              <input type="text" id="new-profile-avatar" maxlength="2" placeholder="例: 家族, 事業">
+            </div>
+            <button class="btn btn-primary mt-4 w-full" id="btn-add-profile">
+              <i data-lucide="user-plus"></i>
+              <span>新規プロファイルを作成</span>
+            </button>
+          </div>
+
+          <!-- プロファイル編集フォーム (初期非表示) -->
+          <div class="profile-section" id="profile-edit-section" style="display: none;">
+            <h4 class="section-subtitle">✏️ プロファイルの編集</h4>
+            <input type="hidden" id="edit-profile-id">
+            <div class="form-group">
+              <label>プロファイル名</label>
+              <input type="text" id="edit-profile-name" placeholder="例: 個人用プロファイル">
+            </div>
+            <div class="form-group mt-3">
+              <label>口座タグ・説明</label>
+              <input type="text" id="edit-profile-account" placeholder="例: メイン口座連携, カード連携">
+            </div>
+            <div class="form-group mt-3">
+              <label>アバター略称 (2文字)</label>
+              <input type="text" id="edit-profile-avatar" maxlength="2" placeholder="例: 個人">
+            </div>
+
+            <!-- 所属口座・カードの管理 -->
+            <div class="form-group mt-3">
+              <label>所属する口座・クレジットカード一覧</label>
+              <div class="account-pill-list" id="edit-profile-accounts-list">
+                <!-- JS動的挿入 -->
+              </div>
+              <div class="add-account-row mt-2">
+                <input type="text" id="new-account-name-input" placeholder="追加する口座・カード名 (例: SBI新生銀行)">
+                <button class="btn btn-secondary btn-sm" id="btn-add-account-to-profile">
+                  <i data-lucide="plus"></i> 追加
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions-row mt-4">
+              <button class="btn btn-secondary" id="btn-cancel-edit-profile">キャンセル</button>
+              <button class="btn btn-primary" id="btn-save-edit-profile">
+                <i data-lucide="check"></i>
+                <span>変更を保存</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 通知コンテナ -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- カスタム確認モーダル (In-App Confirm Modal) -->
+  <div class="modal-backdrop" id="custom-confirm-modal">
+    <div class="modal-content glass modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-modal-title">削除の確認</h3>
+        <button class="btn-close" id="btn-close-confirm-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message">本当に実行しますか？</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-confirm-cancel">キャンセル</button>
+        <button class="btn btn-danger" id="btn-confirm-ok">
+          <i data-lucide="trash-2"></i> 削除を実行
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
